@@ -5,7 +5,6 @@ import { mutation, query } from "./_generated/server";
 export const createWebsite = mutation({
   args: {
     title: v.string(),
-    slug: v.string(),
     sanityConfig: v.object({
       projectId: v.string(),
       dataset: v.string(),

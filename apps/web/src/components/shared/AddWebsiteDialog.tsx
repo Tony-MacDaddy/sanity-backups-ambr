@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { slugify } from '@/lib/utils';
 import { Loader } from 'lucide-react';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -57,7 +56,6 @@ export default function AddWebsiteDialog({ children }: { children: React.ReactNo
     try {
       const website = await createWebsite({
         title: form.getValues("title"),
-        slug: slugify(form.getValues("title")),
         sanityConfig: form.getValues("sanityConfig"),
       })
       form.reset()
@@ -90,7 +88,7 @@ export default function AddWebsiteDialog({ children }: { children: React.ReactNo
                 <FormField control={form.control} name="title" render={({ field }) => {
                   return(
                     <FormItem>
-                      <FormLabel>Wesbite Name</FormLabel>
+                      <FormLabel>Website Name</FormLabel>
                       <FormControl>
                         <Input 
                           {...field}

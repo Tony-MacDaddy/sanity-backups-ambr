@@ -28,6 +28,12 @@ const backupStatus = new Map<string, {
   startTime: number;
 }>();
 
+// Debug: Log environment variables
+console.log('AWS_REGION:', process.env.AWS_REGION);
+console.log('AWS_ACCESS_KEY_ID:', process.env.AWS_ACCESS_KEY_ID ? '***SET***' : 'NOT SET');
+console.log('AWS_SECRET_ACCESS_KEY:', process.env.AWS_SECRET_ACCESS_KEY ? '***SET***' : 'NOT SET');
+console.log('S3_BUCKET_NAME:', process.env.S3_BUCKET_NAME);
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-2',
   credentials: {
