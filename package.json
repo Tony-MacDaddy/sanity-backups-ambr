@@ -1,0 +1,25 @@
+{
+  "name": "sanity-backups",
+  "private": true,
+  "scripts": {
+    "build": "dotenv -- turbo run build",
+    "dev": "dotenv -- turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^8.0.0",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "5.8.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
