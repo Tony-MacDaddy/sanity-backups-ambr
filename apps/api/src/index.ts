@@ -5,6 +5,7 @@ import cors from 'cors';
 import { createFilename } from './utils/lib';
 import { createClient } from '@sanity/client';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 
 const exportDataset = require('@sanity/export');
 
@@ -104,26 +105,50 @@ async function performBackup(backupId: string, projectId: string, dataset: strin
       startTime: Date.now(),
     });
     
-    console.log('Export finished, reading file...');
+    console.log('Export finished, uploading to S3...');
     
-    const fileContent = fs.readFileSync(filename);
-
-    console.log('Uploading to S3...');
+    // Check if file exists and get its size
+    if (!fs.existsSync(filename)) {
+      throw new Error(`Export file not found: ${filename}`);
+    }
     
-    const uploadParams = {
-      Bucket: process.env.S3_BUCKET_NAME,
-      Key: `${filename}`,
-      Body: fileContent,
-      ContentType: 'application/gzip',
-      Metadata: {
-        projectId: projectId,
-        dataset: dataset,
-        exportDate: new Date().toISOString(),
+    const stats = fs.statSync(filename);
+    console.log(`File size: ${(stats.size / (1024 * 1024)).toFixed(2)} MB`);
+    
+    // Use streaming upload instead of loading entire file into memory
+    const fileStream = fs.createReadStream(filename);
+    
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `${filename}`,
+        Body: fileStream,
+        ContentType: 'application/gzip',
+        Metadata: {
+          projectId: projectId,
+          dataset: dataset,
+          exportDate: new Date().toISOString(),
+        },
       },
-    };
+      queueSize: 4, // Number of parts to upload concurrently
+      partSize: 1024 * 1024 * 5, // 5MB per part
+    });
 
-    const command = new PutObjectCommand(uploadParams);
-    const s3Result = await s3Client.send(command);
+    // Add progress tracking
+    upload.on('httpUploadProgress', (progress) => {
+      if (progress.loaded && progress.total) {
+        const percentage = Math.round((progress.loaded / progress.total) * 100);
+        backupStatus.set(backupId, {
+          ...backupStatus.get(backupId)!,
+          status: 'uploading',
+          message: `Uploading to S3... ${percentage}%`,
+          progress: percentage,
+        });
+      }
+    });
+
+    const s3Result = await upload.done();
     
     console.log('Backup uploaded to S3 successfully', s3Result);
 
@@ -142,18 +167,25 @@ async function performBackup(backupId: string, projectId: string, dataset: strin
     
     const filename = createFilename(projectId, dataset, projectName);
 
+    // Clean up the export file if it exists
     if (fs.existsSync(filename)) {
       try {
+        const stats = fs.statSync(filename);
+        console.log(`Cleaning up file: ${filename} (${(stats.size / (1024 * 1024)).toFixed(2)} MB)`);
         fs.unlinkSync(filename);
+        console.log('File cleanup successful');
       } catch (cleanupError) {
         console.error('Failed to cleanup file:', cleanupError);
       }
     }
     
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Backup error details:', errorMessage);
+    
     backupStatus.set(backupId, {
       status: 'failed',
       message: 'Backup failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
       startTime: Date.now(),
     });
     

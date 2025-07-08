@@ -35,7 +35,8 @@ export default function CreateBackupButton({ website, classNames }: { website: D
       const data = await response.json();
 
       if (data.status === "OK" && data.backupId) {
-        await pollBackupStatus(data.backupId, backup);
+        // Start a single status check after a delay
+        setTimeout(() => checkBackupStatus(data.backupId, backup), 10000);
       } else {
         throw new Error('Failed to start backup');
       }
@@ -43,89 +44,55 @@ export default function CreateBackupButton({ website, classNames }: { website: D
     } catch (error) {
       console.error('Backup failed:', error);
       toast.error('Backup failed');
-    } finally {
       setIsLoading(false);
     }
   }
 
-  async function pollBackupStatus(backupId: string, convexBackupId: Id<"backups">) {
+  async function checkBackupStatus(backupId: string, convexBackupId: Id<"backups">) {
+    try {
+      const statusResponse = await fetch(`/api/backup/status/${backupId}`);
+      const statusData = await statusResponse.json();
 
-    const maxAttempts = 60;
-    let attempts = 0;
-
-    const poll = async (): Promise<void> => {
-      try {
-        const statusResponse = await fetch(`/api/backup/status/${backupId}`);
-        const statusData = await statusResponse.json();
-
-        if (statusData.status === 'completed') {
-          await updateBackup({
-            id: convexBackupId,
-            websiteId: website._id,
-            s3Location: statusData.s3Location || '',
-            status: "success",
-          });
-          toast.success('Backup completed successfully');
-          return;
-        } else if (statusData.status === 'failed') {
-          await updateBackup({
-            id: convexBackupId,
-            websiteId: website._id,
-            s3Location: '',
-            status: "error",
-          });
-          toast.error(`Backup failed: ${statusData.error || 'Unknown error'}`);
-          return;
-        } else if (statusData.status === 'exporting' || statusData.status === 'uploading') {
-          toast.info(`Backup in progress: ${statusData.message}`);
-        }
-
-        attempts++;
-        
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000);
-        } else {
-          await updateBackup({
-            id: convexBackupId,
-            websiteId: website._id,
-            s3Location: '',
-            status: "error",
-          });
-          toast.error('Backup timed out');
-        }
-      } catch (error) {
-        console.error('Error polling backup status:', error);
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000);
-        } else {
-          await updateBackup({
-            id: convexBackupId,
-            websiteId: website._id,
-            s3Location: '',
-            status: "error",
-          });
-          toast.error('Backup status polling failed');
-        }
+      if (statusData.status === 'completed') {
+        await updateBackup({
+          id: convexBackupId,
+          websiteId: website._id,
+          s3Location: statusData.s3Location || '',
+          status: "success",
+        });
+      } else if (statusData.status === 'failed') {
+        await updateBackup({
+          id: convexBackupId,
+          websiteId: website._id,
+          s3Location: '',
+          status: "error",
+        });
+      } else if (statusData.status === 'exporting' || statusData.status === 'uploading') {
+        // Check again in 30 seconds for long-running backups
+        setTimeout(() => checkBackupStatus(backupId, convexBackupId), 30000);
       }
-    };
-
-    setTimeout(poll, 2000);
+    } catch (error) {
+      console.error('Error checking backup status:', error);
+      // Retry once after 30 seconds
+      setTimeout(() => checkBackupStatus(backupId, convexBackupId), 30000);
+    }
   }
 
   return (
     <Button 
-      onClick={handleCreateBackup}
+      onClick={handleCreateBackup} 
       disabled={isLoading}
-      className={cn('w-36 rounded-none h-full px-6', classNames)}
+      className={cn("rounded-none h-full px-4 border-y-0 border-l-0 group", classNames)}
     >
       {isLoading ? (
-        <span className="flex items-center gap-2">
-          Please Wait
-          <Loader2 className='w-4 h-4 animate-spin' />
-        </span>
-      ): (
-        "Create Backup"
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Creating Backup...
+        </>
+      ) : (
+        <>
+          Create Backup
+        </>
       )}
     </Button>
   )

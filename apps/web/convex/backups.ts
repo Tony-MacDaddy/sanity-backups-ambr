@@ -91,3 +91,11 @@ export const deleteBackup = action({
     return { success: true, deletedFromConvex: true, deletedFromS3: true };
   }
 })
+
+export const getBackupStatus = query({
+  args: { id: v.id("backups") },
+  handler: async (ctx, args) => {
+    const backup = await ctx.db.get(args.id);
+    return backup;
+  }
+})
