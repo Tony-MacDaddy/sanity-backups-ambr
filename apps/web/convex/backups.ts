@@ -12,14 +12,16 @@ export const createBackup = mutation({
       v.literal("success"), 
       v.literal("error")
     ),
+    errorMessage: v.optional(v.string()),
   },
   handler: async (ctx,args) => {
-    const { websiteId, s3Location, status } = args;
+    const { websiteId, s3Location, status, errorMessage } = args;
 
     const backup = await ctx.db.insert("backups", {
       websiteId: websiteId,
       s3Location: s3Location || "",
       status: status,
+      errorMessage: errorMessage || "",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -37,14 +39,16 @@ export const updateBackup = mutation({
       v.literal("pending"), 
       v.literal("success"), 
       v.literal("error")
-    ) 
+    ),
+    errorMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, websiteId, s3Location, status } = args;
+    const { id, websiteId, s3Location, status, errorMessage } = args;
     await ctx.db.patch(id, { 
       websiteId: websiteId, 
       s3Location: s3Location || "", 
       status: status,
+      errorMessage: errorMessage || "",
       updatedAt: Date.now(), 
     });
   }

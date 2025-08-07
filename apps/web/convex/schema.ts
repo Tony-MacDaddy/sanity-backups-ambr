@@ -18,6 +18,7 @@ const schema = defineSchema({
     websiteId: v.id("websites"),
     s3Location: v.string(),
     status: v.union(v.literal("pending"), v.literal("success"), v.literal("error")),
+    errorMessage: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_website", ["websiteId"]),

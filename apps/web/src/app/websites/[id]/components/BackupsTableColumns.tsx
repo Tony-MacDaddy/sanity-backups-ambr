@@ -1,15 +1,17 @@
 "use client"
 
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import DownloadBackupButton from "@/app/websites/[id]/components/DownloadBackupButton";
 
 export type Backup = {
   _id: string;
   status: "pending" | "success" | "error";
   s3Location: string;
+  errorMessage?: string;
   createdAt: number;
 };
 
@@ -17,8 +19,10 @@ export const columns: ColumnDef<Backup>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ getValue }) => {
+    cell: ({ getValue, row }) => {
       const value = getValue() as string;
+      const errorMessage = row.original.errorMessage;
+      
       if (value === "pending") {
         return (
           <PendingIndicator />
@@ -29,7 +33,7 @@ export const columns: ColumnDef<Backup>[] = [
         );
       } else if (value === "error") {
         return (
-          <FailedIndicator />
+          <FailedIndicator errorMessage={errorMessage} />
         );
       }
 
@@ -62,7 +66,7 @@ export const columns: ColumnDef<Backup>[] = [
 
 export const selectionColumn = {
   id: 'select',
-  header: ({ table }: any) => (
+  header: ({ table }: { table: Table<Backup> }) => (
     <Checkbox
       checked={table.getIsAllPageRowsSelected()}
       onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
@@ -70,7 +74,7 @@ export const selectionColumn = {
       className="translate-y-[2px] bg-white"
     />
   ),
-  cell: ({ row }: any) => (
+  cell: ({ row }: { row: Row<Backup> }) => (
     <Checkbox
       checked={row.getIsSelected()}
       onCheckedChange={value => row.toggleSelected(!!value)}
@@ -99,12 +103,33 @@ function SuccessIndicator() {
   )
 };
 
-function FailedIndicator() {
+function FailedIndicator({ errorMessage }: { errorMessage?: string }) {
+  if (!errorMessage) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="failure">Failed</Badge>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant="failure">Failed</Badge>
-    </div>
-  )
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-help">
+            <Badge variant="failure">Failed</Badge>
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-md">
+          <div className="text-sm">
+            <p className="font-semibold mb-1">Backup Error:</p>
+            <p className="text-xs break-words">{errorMessage}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 };
 
 export const allColumns: ColumnDef<Backup>[] = [selectionColumn, ...columns]; 
