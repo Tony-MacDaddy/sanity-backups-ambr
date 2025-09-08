@@ -9,9 +9,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@sanity/export'],
-  },
+  serverExternalPackages: ['@sanity/export'],
   serverRuntimeConfig: {
     maxDuration: 300,
   },
