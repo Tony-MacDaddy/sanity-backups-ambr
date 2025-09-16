@@ -45,7 +45,12 @@ export const columns: ColumnDef<Backup>[] = [
     header: "Date",
     cell: ({ getValue }) => {
       const value = getValue() as number;
-      return new Date(value).toLocaleString();
+      const date = new Date(value);
+      const month = date.toLocaleString('default', { month: 'long' });
+      const day = date.getDate();
+      const year = date.getFullYear();
+      const time = date.toLocaleTimeString();
+      return `${month} ${day}, ${year} at ${time}`;
     },
   },
   {
