@@ -32,7 +32,7 @@ export function PrimarySidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {websites?.map((website) => (
+              {websites?.slice().sort((a, b) => a.title.localeCompare(b.title)).map((website) => (
                 <SidebarMenuItem key={website._id}>
                   <SidebarMenuButton asChild>
                     <Link 
