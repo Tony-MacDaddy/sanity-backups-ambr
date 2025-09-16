@@ -31,3 +31,6 @@ yarn-error.log*
 *.pem
 
 !.env.env
+.env
+.env.*
+apps/web/.env.local
